@@ -1,7 +1,7 @@
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-// const validatePassword = require("../utils/validatePassword");
+const validatePassword = require("../utils/validatePassword");
 
 exports.register = async (req, res) => {
   try {
@@ -26,11 +26,11 @@ exports.register = async (req, res) => {
         .json({ msg: "Email or Mobile Number already registered." });
 
     // Validate password strength
-    // if (!validatePassword(password)) {
-    //   return res.status(400).json({
-    //     msg: "Password must contain uppercase, lowercase, number, symbol, and be 8+ characters long.",
-    //   });
-    // }
+    if (!validatePassword(password)) {
+      return res.status(400).json({
+        msg: "Password must contain uppercase, lowercase, number, symbol, and be 8+ characters long.",
+      });
+    }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
