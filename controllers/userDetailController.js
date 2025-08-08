@@ -1,103 +1,193 @@
 const UserDetail = require("../models/UserDetail");
-const User = require("../models/User");
+const calculateProfileCompletion = require("./../utils/profileCompletion");
 
-exports.createUserDetail = async (req, res) => {
+// Create or update basic info
+exports.createOrUpdateBasic = async (req, res) => {
   try {
-    const {
-      userId,
-      motherTongue,
-      religion,
-      caste,
-      country,
-      state,
-      district,
-      city,
-      pinCode,
-      height,
-      weight,
-      bodyType,
-      diet,
-      disability,
-      highestEducation,
-      professionType,
-      jobTitle,
-      salaryLevel,
-      motherOccupation,
-      fatherOccupation,
-      numberOfBrothers,
-      numberOfSisters,
-      familyStatus,
-      interests,
-      descriptionYourself,
-      suggestion,
-      samples,
-    } = req.body;
-
-    const photoUrl = req.file ? "https://dummyurl.com/image.jpg" : ""; // placeholder if no file uploaded
-
-    const newDetail = new UserDetail({
-      userId,
-      motherTongue,
-      religion,
-      caste,
-      country,
-      state,
-      district,
-      city,
-      pinCode,
-      height,
-      weight,
-      bodyType,
-      diet,
-      disability,
-      highestEducation,
-      professionType,
-      jobTitle,
-      salaryLevel,
-      motherOccupation,
-      fatherOccupation,
-      numberOfBrothers,
-      numberOfSisters,
-      familyStatus,
-      interests: interests ? interests.split(",") : [],
-      photo: photoUrl,
-      descriptionYourself,
-      samples: samples ? samples.split(",") : [],
-      suggestion,
+    const { profileCreatingFor, name, gender } = req.body;
+    const profile = await UserDetail.findOneAndUpdate(
+      { userId: req.user.id },
+      { profileCreatingFor, name, gender },
+      { new: true, upsert: true }
+    );
+    const completion = calculateProfileCompletion(profile);
+    res.json({
+      msg: "Basic info updated",
+      profile,
+      completionPercentage: completion,
     });
-
-    await newDetail.save();
-
-    res
-      .status(201)
-      .json({ msg: "User detail saved successfully", data: newDetail });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ msg: "Server error" });
+    console.log(err);
+    res.status(500).json({ msg: "Server Error" });
   }
 };
 
-exports.getUserDetailByUserId = async (req, res) => {
+exports.basicDetails = async (req, res) => {
   try {
-    const userId = req.params.userId;
-
-    // Fetch user and user details
-    const user = await User.findById(userId).lean(); // base user info
-    const userDetail = await UserDetail.findOne({ userId }).lean(); // extended info
-
-    if (!user || !userDetail) {
-      return res.status(404).json({ msg: "User or details not found" });
-    }
-
-    // Combine both
-    const fullProfile = {
-      ...user,
-      details: userDetail,
-    };
-
-    res.json({ msg: "User detail fetched successfully", data: fullProfile });
+    const { motherTongue, religion, caste } = req.body;
+    const profile = await UserDetail.findOneAndUpdate(
+      { userId: req.user.id },
+      { motherTongue, religion, caste },
+      { new: true, upsert: true }
+    );
+    const completion = calculateProfileCompletion(profile);
+    res.json({
+      msg: "Details updated",
+      profile,
+      completionPercentage: completion,
+    });
   } catch (err) {
-    console.error(err);
+    console.log(err);
+    res.status(500).json({ msg: "Server Error" });
+  }
+};
+
+exports.locationDetails = async (req, res) => {
+  try {
+    const { address, city, state, district, pincode } = req.body;
+    const profile = await UserDetail.findOneAndUpdate(
+      { userId: req.user.id },
+      { address, state, district, city, pincode },
+      { new: true, upsert: true }
+    );
+    const completion = calculateProfileCompletion(profile);
+    res.json({
+      msg: "Location updated",
+      profile,
+      completionPercentage: completion,
+    });
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error" });
+  }
+};
+
+exports.physicalDetails = async (req, res) => {
+  try {
+    const { height, weight, bodyType, diet, disability } = req.body;
+    const profile = await UserDetail.findOneAndUpdate(
+      { userId: req.user.id },
+      { height, weight, bodyType, diet, disability },
+      { new: true, upsert: true }
+    );
+    const completion = calculateProfileCompletion(profile);
+    res.json({
+      msg: "Physical details updated",
+      profile,
+      completionPercentage: completion,
+    });
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error" });
+  }
+};
+
+exports.educationJob = async (req, res) => {
+  try {
+    const { highestEducation, jobTitle, professionType } = req.body;
+    const profile = await UserDetail.findOneAndUpdate(
+      { userId: req.user.id },
+      { highestEducation, jobTitle, professionType },
+      { new: true, upsert: true }
+    );
+    const completion = calculateProfileCompletion(profile);
+    res.json({
+      msg: "Education & Job details updated",
+      profile,
+      completionPercentage: completion,
+    });
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error" });
+  }
+};
+
+exports.familyDetails = async (req, res) => {
+  try {
+    const {
+      fatherName,
+      fatherOccupation,
+      motherName,
+      motherOccupation,
+      siblingsCounts,
+      familyStatus,
+    } = req.body;
+    const profile = await UserDetail.findOneAndUpdate(
+      { userId: req.user.id },
+      {
+        fatherName,
+        fatherOccupation,
+        motherName,
+        motherOccupation,
+        siblingsCounts,
+        familyStatus,
+      },
+      { new: true, upsert: true }
+    );
+    const completion = calculateProfileCompletion(profile);
+    res.json({
+      msg: "Family details updated",
+      profile,
+      completionPercentage: completion,
+    });
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error" });
+  }
+};
+
+exports.uploadPhotos = async (req, res) => {
+  try {
+    const photoPaths = req.files.map((file) => file.path);
+    const profile = await UserDetail.findOneAndUpdate(
+      { userId: req.user.id },
+      { $push: { photos: { $each: photoPaths } } },
+      { new: true, upsert: true }
+    );
+    const completion = calculateProfileCompletion(profile);
+    res.json({
+      msg: "Photos uploaded",
+      profile,
+      completionPercentage: completion,
+    });
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error" });
+  }
+};
+
+exports.aboutYourself = async (req, res) => {
+  try {
+    const { describeYourself, viewSample } = req.body;
+    const profile = await UserDetail.findOneAndUpdate(
+      { userId: req.user.id },
+      { describeYourself, viewSample },
+      { new: true, upsert: true }
+    );
+    const completion = calculateProfileCompletion(profile);
+    res.json({
+      msg: "About yourself updated",
+      profile,
+      completionPercentage: completion,
+    });
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error" });
+  }
+};
+
+exports.getProfile = async (req, res) => {
+  try {
+    const profile = await UserDetail.findOne({ user: req.user.id });
+    if (!profile) return res.status(404).json({ msg: "Profile not found" });
+    res.json(profile);
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error" });
+  }
+};
+
+exports.getCompletionPercentage = async (req, res) => {
+  try {
+    const profile = await UserDetail.findOne({ userId: req.user.id });
+    if (!profile) return res.status(404).json({ msg: "Profile not found" });
+
+    const completion = calculateProfileCompletion(profile);
+    res.json({ completionPercentage: completion });
+  } catch (err) {
     res.status(500).json({ msg: "Server Error" });
   }
 };

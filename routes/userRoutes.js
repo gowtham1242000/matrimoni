@@ -6,6 +6,8 @@ const userController = require("../controllers/userController");
 
 // Public Routes
 router.post("/register", userController.register);
+router.post("/verifyOtp", userController.verifyOtp);
+router.post("/setPassword", userController.setPassword);
 router.post("/login", userController.login); // ✅ if you have login logic
 
 // Protected Routes

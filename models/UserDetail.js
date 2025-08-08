@@ -1,49 +1,63 @@
 const mongoose = require("mongoose");
 
-const userDetailSchema = new mongoose.Schema(
-  {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-
-    motherTongue: { type: String, required: true },
-    religion: { type: String, required: true },
-    caste: { type: String, required: true },
-
-    country: { type: String, required: true },
-    state: { type: String, required: true },
-    district: { type: String, required: true },
-    city: { type: String, required: true },
-    pinCode: { type: String, required: true },
-
-    height: { type: String }, // e.g., "5ft 8in" or cm
-    weight: { type: String }, // e.g., "70kg"
-    bodyType: { type: String }, // e.g., Slim, Athletic, Heavy
-    diet: { type: String }, // Vegetarian, Non-Vegetarian, etc.
-    disability: { type: String }, // "None" or describe
-
-    highestEducation: { type: String },
-    professionType: { type: String },
-    jobTitle: { type: String },
-    salaryLevel: { type: String }, // Could be a range like "<5L", "5L-10L", etc.
-
-    motherOccupation: { type: String },
-    fatherOccupation: { type: String },
-    numberOfBrothers: { type: Number, default: 0 },
-    numberOfSisters: { type: Number, default: 0 },
-    familyStatus: { type: String }, // Joint/Nuclear/Other
-
-    interests: [{ type: String }], // Can be multiple
-    photo: { type: String }, // image URL or filename
-    descriptionYourself: { type: String },
-    samples: [{ type: String }], // image URLs, audio, or other media
-    suggestion: { type: String },
+const userDetailSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
   },
-  {
-    timestamps: true,
-  }
-);
+
+  // Step 1 - Basic
+  profileCreatingFor: { type: String, trim: true },
+  name: { type: String, trim: true },
+  gender: { type: String, trim: true },
+
+  // Basic Details
+  motherTongue: { type: String, trim: true },
+  religion: { type: String, trim: true },
+  caste: { type: String, trim: true },
+
+  // Location Details
+  address: { type: String, trim: true },
+  state: { type: String, trim: true },
+  district: { type: String, trim: true },
+  city: { type: String, trim: true },
+  pincode: { type: String, trim: true },
+
+  // Physical
+  height: { type: String, trim: true },
+  weight: { type: Number },
+  bodyType: { type: String, trim: true },
+  diet: { type: String, trim: true },
+  disability: { type: String, enum: ["Yes", "No"], default: "No" },
+
+  // Education/Job
+  highestEducation: { type: String, trim: true },
+  professionType: { type: String, trim: true },
+  jobTitle: { type: String, trim: true },
+
+  // Family
+  fatherName: { type: String, trim: true },
+  fatherOccupation: { type: String, trim: true },
+  motherName: { type: String, trim: true },
+  motherOccupation: { type: String, trim: true },
+  siblingsCount: { type: Number },
+  familyStatus: { type: String, trim: true },
+
+  // Interests (multiple)
+  addInterest: {
+    type: [String],
+    enum: ["Creative & Artistic", "Entertainment & Media", "Sports & Outdoor"],
+  },
+
+  // Photos
+  photos: [{ type: String }], // paths or URLs
+
+  // About
+  describeYourself: { type: String, trim: true },
+  viewSample: { type: String, trim: true },
+
+  updatedAt: { type: Date, default: Date.now },
+});
 
 module.exports = mongoose.model("UserDetail", userDetailSchema);
