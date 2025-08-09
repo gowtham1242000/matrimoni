@@ -169,6 +169,28 @@ exports.aboutYourself = async (req, res) => {
     res.status(500).json({ msg: "Server Error" });
   }
 };
+exports.addInterestData = async (req, res) => {
+  try {
+    const { addInterest } = req.body;
+
+    if (!addInterest) {
+      return res.status(400).json({ msg: "addInterest is required" });
+    }
+
+    const profile = await UserDetail.findOneAndUpdate(
+      { userId: req.user.id }, // coming from auth middleware
+      { addInterest }, // Replace old interests
+      { new: true, upsert: true }
+    );
+
+    res.json({
+      msg: "Interest updated successfully",
+      profile,
+    });
+  } catch (error) {
+    res.status(500).json({ msg: "Server error", error: error.message });
+  }
+};
 
 exports.getProfile = async (req, res) => {
   try {

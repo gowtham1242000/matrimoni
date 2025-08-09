@@ -18,6 +18,7 @@ router.post(
   userDetailController.uploadPhotos
 );
 router.post("/about", auth, userDetailController.aboutYourself);
+router.post("/interset", auth, userDetailController.addInterestData);
 router.get("/", auth, userDetailController.getProfile);
 router.get(
   "/getCompletionPercentage",
