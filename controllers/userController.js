@@ -3,32 +3,76 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const validatePassword = require("../utils/validatePassword");
 
-// Helper to generate OTP (4-digit for example)
+// Helper to generate OTP
 const generateOtp = () => Math.floor(1000 + Math.random() * 9000).toString();
 
-/**
- * 1️⃣ Register - OTP First
- */
+// Helper: Standard API Response
+const sendResponse = (
+  res,
+  success,
+  message,
+  data = [],
+  error = null,
+  statusCode = 200
+) => {
+  return res.status(statusCode).json({
+    success,
+    message,
+    data,
+    error,
+  });
+};
+
+// 1️⃣ Register
 exports.register = async (req, res) => {
   try {
     const { mobileNumber, emailId } = req.body;
 
-    // Check for existing user
-    const existingUser = await User.findOne({
-      $or: [{ emailId }, { mobileNumber }],
-    });
-    if (existingUser)
-      return res
-        .status(400)
-        .json({ msg: "Email or Mobile Number already registered." });
+    if (!mobileNumber) {
+      return sendResponse(
+        res,
+        false,
+        "Mobile number is required",
+        [],
+        "Validation Error",
+        400
+      );
+    }
 
-    // Set default OTP
-    const otp = "1234"; // Fixed OTP
-    const otpExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
+    const normalizedMobile = mobileNumber
+      .trim()
+      .replace(/^0/, "+91")
+      .replace(/^91/, "+91");
 
-    // Save user without password
+    const query = { mobileNumber: normalizedMobile };
+
+    if (emailId && emailId.trim() !== "") {
+      query.$or = [
+        { emailId: emailId.trim() },
+        { mobileNumber: normalizedMobile },
+      ];
+    }
+
+    const existingUser = await User.findOne(query);
+    if (existingUser) {
+      return sendResponse(
+        res,
+        false,
+        existingUser.mobileNumber === normalizedMobile
+          ? "Mobile number already registered"
+          : "Email already registered",
+        [],
+        null,
+        400
+      );
+    }
+
+    const otp = "1234"; // Replace with generateOtp() in production
+    const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
+
     const user = new User({
-      mobileNumber,
+      mobileNumber: normalizedMobile,
+      emailId: emailId ? emailId.trim() : undefined,
       otp,
       otpExpiry,
       isOtpVerified: false,
@@ -36,21 +80,16 @@ exports.register = async (req, res) => {
 
     await user.save();
 
-    // Log OTP (since we're not sending SMS here)
-    console.log(`✅ OTP for ${mobileNumber || emailId} is: ${otp}`);
+    console.log(`✅ OTP for ${normalizedMobile} is: ${otp}`);
 
-    res
-      .status(200)
-      .json({ msg: "OTP sent successfully. Please verify to set password." });
+    return sendResponse(res, true, "OTP sent successfully");
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "Server Error" });
+    return sendResponse(res, false, "Server Error", [], err.message, 500);
   }
 };
 
-/**
- * 2️⃣ Verify OTP
- */
+// 2️⃣ Verify OTP
 exports.verifyOtp = async (req, res) => {
   try {
     const { identifier, otp } = req.body;
@@ -59,12 +98,12 @@ exports.verifyOtp = async (req, res) => {
       $or: [{ emailId: identifier }, { mobileNumber: identifier }],
     });
 
-    if (!user) return res.status(400).json({ msg: "User not found" });
+    if (!user) return sendResponse(res, false, "User not found", [], null, 400);
     if (user.isOtpVerified)
-      return res.status(400).json({ msg: "OTP already verified" });
+      return sendResponse(res, false, "OTP already verified", [], null, 400);
 
     if (user.otp !== otp || new Date() > user.otpExpiry) {
-      return res.status(400).json({ msg: "Invalid or expired OTP" });
+      return sendResponse(res, false, "Invalid or expired OTP", [], null, 400);
     }
 
     user.isOtpVerified = true;
@@ -72,18 +111,18 @@ exports.verifyOtp = async (req, res) => {
     user.otpExpiry = undefined;
 
     await user.save();
-    res
-      .status(200)
-      .json({ msg: "OTP verified. You can now set your password." });
+    return sendResponse(
+      res,
+      true,
+      "OTP verified. You can now set your password."
+    );
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "Server Error" });
+    return sendResponse(res, false, "Server Error", [], err.message, 500);
   }
 };
 
-/**
- * 3️⃣ Set Password (after OTP verification)
- */
+// 3️⃣ Set Password
 exports.setPassword = async (req, res) => {
   try {
     const { identifier, password } = req.body;
@@ -92,34 +131,37 @@ exports.setPassword = async (req, res) => {
       $or: [{ emailId: identifier }, { mobileNumber: identifier }],
     });
 
-    if (!user) return res.status(400).json({ msg: "User not found" });
+    if (!user) return sendResponse(res, false, "User not found", [], null, 400);
     if (!user.isOtpVerified)
-      return res.status(400).json({ msg: "OTP not verified yet" });
+      return sendResponse(res, false, "OTP not verified yet", [], null, 400);
 
-    // Validate password
     if (!validatePassword(password)) {
-      return res.status(400).json({
-        msg: "Password must contain uppercase, lowercase, number, symbol, and be 8+ characters long.",
-      });
+      return sendResponse(
+        res,
+        false,
+        "Password must contain uppercase, lowercase, number, symbol, and be 8+ characters long.",
+        [],
+        null,
+        400
+      );
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     user.password = hashedPassword;
 
     await user.save();
-    res
-      .status(200)
-      .json({ msg: "Password set successfully. You can now login." });
+    return sendResponse(
+      res,
+      true,
+      "Password set successfully. You can now login."
+    );
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "Server Error" });
+    return sendResponse(res, false, "Server Error", [], err.message, 500);
   }
 };
 
-/**
- * 4️⃣ Login
- */
+// 4️⃣ Login
 exports.login = async (req, res) => {
   try {
     const { identifier, password } = req.body;
@@ -128,26 +170,32 @@ exports.login = async (req, res) => {
       $or: [{ emailId: identifier }, { mobileNumber: identifier }],
     });
 
-    if (!user) return res.status(400).json({ msg: "User not found" });
+    if (!user) return sendResponse(res, false, "User not found", [], null, 400);
     if (!user.isOtpVerified)
-      return res.status(400).json({ msg: "Please verify OTP first" });
+      return sendResponse(res, false, "Please verify OTP first", [], null, 400);
     if (!user.password)
-      return res.status(400).json({ msg: "Please set your password first" });
+      return sendResponse(
+        res,
+        false,
+        "Please set your password first",
+        [],
+        null,
+        400
+      );
 
-    // Check password
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ msg: "Invalid credentials" });
+    if (!isMatch)
+      return sendResponse(res, false, "Invalid credentials", [], null, 400);
 
-    // Generate JWT token
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    res.status(200).json({ msg: "Login successful", token });
+    return sendResponse(res, true, "Login successful", { token });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "Server Error" });
+    return sendResponse(res, false, "Server Error", [], err.message, 500);
   }
 };

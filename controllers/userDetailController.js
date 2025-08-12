@@ -1,7 +1,24 @@
 const UserDetail = require("../models/UserDetail");
 const calculateProfileCompletion = require("./../utils/profileCompletion");
 
-// Create or update basic info
+// Helper: Standard API Response
+const sendResponse = (
+  res,
+  success,
+  message,
+  data = [],
+  error = null,
+  statusCode = 200
+) => {
+  return res.status(statusCode).json({
+    success,
+    message,
+    data,
+    error,
+  });
+};
+
+// 1️⃣ Create or Update Basic Info
 exports.createOrUpdateBasic = async (req, res) => {
   try {
     const { profileCreatingFor, name, gender } = req.body;
@@ -11,17 +28,16 @@ exports.createOrUpdateBasic = async (req, res) => {
       { new: true, upsert: true }
     );
     const completion = calculateProfileCompletion(profile);
-    res.json({
-      msg: "Basic info updated",
+    return sendResponse(res, true, "Basic info updated", {
       profile,
       completionPercentage: completion,
     });
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ msg: "Server Error" });
+    return sendResponse(res, false, "Server Error", [], err.message, 500);
   }
 };
 
+// 2️⃣ Basic Details
 exports.basicDetails = async (req, res) => {
   try {
     const { motherTongue, religion, caste } = req.body;
@@ -31,17 +47,16 @@ exports.basicDetails = async (req, res) => {
       { new: true, upsert: true }
     );
     const completion = calculateProfileCompletion(profile);
-    res.json({
-      msg: "Details updated",
+    return sendResponse(res, true, "Details updated", {
       profile,
       completionPercentage: completion,
     });
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ msg: "Server Error" });
+    return sendResponse(res, false, "Server Error", [], err.message, 500);
   }
 };
 
+// 3️⃣ Location Details
 exports.locationDetails = async (req, res) => {
   try {
     const { address, city, state, district, pincode } = req.body;
@@ -51,16 +66,16 @@ exports.locationDetails = async (req, res) => {
       { new: true, upsert: true }
     );
     const completion = calculateProfileCompletion(profile);
-    res.json({
-      msg: "Location updated",
+    return sendResponse(res, true, "Location updated", {
       profile,
       completionPercentage: completion,
     });
   } catch (err) {
-    res.status(500).json({ msg: "Server Error" });
+    return sendResponse(res, false, "Server Error", [], err.message, 500);
   }
 };
 
+// 4️⃣ Physical Details
 exports.physicalDetails = async (req, res) => {
   try {
     const { height, weight, bodyType, diet, disability } = req.body;
@@ -70,16 +85,16 @@ exports.physicalDetails = async (req, res) => {
       { new: true, upsert: true }
     );
     const completion = calculateProfileCompletion(profile);
-    res.json({
-      msg: "Physical details updated",
+    return sendResponse(res, true, "Physical details updated", {
       profile,
       completionPercentage: completion,
     });
   } catch (err) {
-    res.status(500).json({ msg: "Server Error" });
+    return sendResponse(res, false, "Server Error", [], err.message, 500);
   }
 };
 
+// 5️⃣ Education & Job
 exports.educationJob = async (req, res) => {
   try {
     const { highestEducation, jobTitle, professionType } = req.body;
@@ -89,16 +104,16 @@ exports.educationJob = async (req, res) => {
       { new: true, upsert: true }
     );
     const completion = calculateProfileCompletion(profile);
-    res.json({
-      msg: "Education & Job details updated",
+    return sendResponse(res, true, "Education & Job details updated", {
       profile,
       completionPercentage: completion,
     });
   } catch (err) {
-    res.status(500).json({ msg: "Server Error" });
+    return sendResponse(res, false, "Server Error", [], err.message, 500);
   }
 };
 
+// 6️⃣ Family Details
 exports.familyDetails = async (req, res) => {
   try {
     const {
@@ -122,16 +137,16 @@ exports.familyDetails = async (req, res) => {
       { new: true, upsert: true }
     );
     const completion = calculateProfileCompletion(profile);
-    res.json({
-      msg: "Family details updated",
+    return sendResponse(res, true, "Family details updated", {
       profile,
       completionPercentage: completion,
     });
   } catch (err) {
-    res.status(500).json({ msg: "Server Error" });
+    return sendResponse(res, false, "Server Error", [], err.message, 500);
   }
 };
 
+// 7️⃣ Upload Photos
 exports.uploadPhotos = async (req, res) => {
   try {
     const photoPaths = req.files.map((file) => file.path);
@@ -141,16 +156,16 @@ exports.uploadPhotos = async (req, res) => {
       { new: true, upsert: true }
     );
     const completion = calculateProfileCompletion(profile);
-    res.json({
-      msg: "Photos uploaded",
+    return sendResponse(res, true, "Photos uploaded", {
       profile,
       completionPercentage: completion,
     });
   } catch (err) {
-    res.status(500).json({ msg: "Server Error" });
+    return sendResponse(res, false, "Server Error", [], err.message, 500);
   }
 };
 
+// 8️⃣ About Yourself
 exports.aboutYourself = async (req, res) => {
   try {
     const { describeYourself, viewSample } = req.body;
@@ -160,56 +175,65 @@ exports.aboutYourself = async (req, res) => {
       { new: true, upsert: true }
     );
     const completion = calculateProfileCompletion(profile);
-    res.json({
-      msg: "About yourself updated",
+    return sendResponse(res, true, "About yourself updated", {
       profile,
       completionPercentage: completion,
     });
   } catch (err) {
-    res.status(500).json({ msg: "Server Error" });
+    return sendResponse(res, false, "Server Error", [], err.message, 500);
   }
 };
+
+// 9️⃣ Add Interest
 exports.addInterestData = async (req, res) => {
   try {
     const { addInterest } = req.body;
-
     if (!addInterest) {
-      return res.status(400).json({ msg: "addInterest is required" });
+      return sendResponse(
+        res,
+        false,
+        "addInterest is required",
+        [],
+        "Validation Error",
+        400
+      );
     }
-
     const profile = await UserDetail.findOneAndUpdate(
-      { userId: req.user.id }, // coming from auth middleware
-      { addInterest }, // Replace old interests
+      { userId: req.user.id },
+      { addInterest },
       { new: true, upsert: true }
     );
-
-    res.json({
-      msg: "Interest updated successfully",
+    return sendResponse(res, true, "Interest updated successfully", {
       profile,
     });
   } catch (error) {
-    res.status(500).json({ msg: "Server error", error: error.message });
+    return sendResponse(res, false, "Server Error", [], error.message, 500);
   }
 };
 
+// 🔟 Get Profile
 exports.getProfile = async (req, res) => {
   try {
     const profile = await UserDetail.findOne({ user: req.user.id });
-    if (!profile) return res.status(404).json({ msg: "Profile not found" });
-    res.json(profile);
+    if (!profile)
+      return sendResponse(res, false, "Profile not found", [], null, 404);
+    return sendResponse(res, true, "Profile fetched successfully", { profile });
   } catch (err) {
-    res.status(500).json({ msg: "Server Error" });
+    return sendResponse(res, false, "Server Error", [], err.message, 500);
   }
 };
 
+// 1️⃣1️⃣ Get Completion Percentage
 exports.getCompletionPercentage = async (req, res) => {
   try {
     const profile = await UserDetail.findOne({ userId: req.user.id });
-    if (!profile) return res.status(404).json({ msg: "Profile not found" });
-
+    if (!profile)
+      return sendResponse(res, false, "Profile not found", [], null, 404);
     const completion = calculateProfileCompletion(profile);
-    res.json({ completionPercentage: completion });
+    return sendResponse(res, true, "Completion percentage fetched", {
+      completionPercentage: completion,
+    });
   } catch (err) {
-    res.status(500).json({ msg: "Server Error" });
+    return sendResponse(res, false, "Server Error", [], err.message, 500);
   }
 };

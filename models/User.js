@@ -2,8 +2,14 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
-    mobileNumber: { type: String, required: false, unique: true },
-    emailId: { type: String, required: false, unique: true },
+    mobileNumber: { type: String, required: false, sparse: true },
+    emailId: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      unique: true,
+      sparse: true, // This makes MongoDB allow multiple nulls
+    },
 
     // OTP fields
     otp: { type: String }, // store OTP (hashed if you want more security)
