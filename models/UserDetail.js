@@ -44,12 +44,12 @@ const userDetailSchema = new mongoose.Schema({
   siblingsCount: { type: Number },
   familyStatus: { type: String, trim: true },
 
-  addInterest: [
-    {
-      category: { type: String, required: true },
-      items: { type: [String], required: true },
-    },
-  ],
+  // Interests (multiple)
+  addInterest: {
+    type: [String],
+    enum: ["Creative & Artistic", "Entertainment & Media", "Sports & Outdoor"],
+  },
+
   // Photos
   photos: [{ type: String }], // paths or URLs
 
