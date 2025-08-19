@@ -2,6 +2,7 @@ const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const validatePassword = require("../utils/validatePassword");
+const UserDetail = require("../models/UserDetail");
 
 // Helper to generate OTP
 const generateOtp = () => Math.floor(1000 + Math.random() * 9000).toString();
@@ -197,5 +198,48 @@ exports.login = async (req, res) => {
   } catch (err) {
     console.error(err);
     return sendResponse(res, false, "Server Error", [], err.message, 500);
+  }
+};
+
+// -------------------- USER PROFILE LIST --------------------
+exports.getUserProfileList = async (req, res) => {
+  try {
+    // Get pagination params (default page=1, limit=5)
+    let { page = 1, limit = 5 } = req.query;
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    // Skip my profile (auth user)
+    const query = { userId: { $ne: req.user.id } };
+
+    // Get total count
+    const totalUsers = await UserDetail.countDocuments(query);
+
+    // Get paginated users
+    const users = await UserDetail.find(query)
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .select("-__v -updatedAt") // exclude unwanted fields if needed
+      .lean();
+
+    res.json({
+      success: true,
+      message: "User profiles fetched",
+      data: users,
+      pagination: {
+        total: totalUsers,
+        page,
+        limit,
+        totalPages: Math.ceil(totalUsers / limit),
+      },
+      error: null,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      data: [],
+      error: error.message,
+    });
   }
 };
