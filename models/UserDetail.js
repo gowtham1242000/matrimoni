@@ -29,7 +29,8 @@ const userDetailSchema = new mongoose.Schema({
   weight: { type: Number },
   bodyType: { type: String, trim: true },
   diet: { type: String, trim: true },
-  disability: { type: String, enum: ["Yes", "No"], default: "No" },
+//  disability: { type: String, enum: ["Yes", "No"], default: "No" },
+  disability: { type: String, enum: ["Yes", "No", "yes", "no"] },
 
   // Education/Job
   highestEducation: { type: String, trim: true },

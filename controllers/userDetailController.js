@@ -1,6 +1,10 @@
 const UserDetail = require("../models/UserDetail");
 const calculateProfileCompletion = require("./../utils/profileCompletion");
-
+const fs = require("fs");
+const path = require("path");
+const sharp = require("sharp");
+const BASE_DIR = "/etc/ec/userphoto";  // storage root
+const BASE_URL = "http://165.22.222.251:80"; // change to your IP/domain
 // Helper: Standard API Response
 const sendResponse = (
   res,
@@ -146,20 +150,52 @@ exports.familyDetails = async (req, res) => {
   }
 };
 
+
+// helper: save image
+// helper: save image
+const saveImage = async (buffer, userId, uniqueName) => {
+  const userDir = path.join(BASE_DIR, userId.toString());
+  if (!fs.existsSync(userDir)) {
+    fs.mkdirSync(userDir, { recursive: true });
+  }
+
+  const filePath = path.join(userDir, uniqueName + ".jpg");
+
+  await sharp(buffer)
+    .resize(800, 800, { fit: "inside" })
+    .jpeg({ quality: 80 })
+    .toFile(filePath);
+
+  // return URL with full path-like structure
+  return `${BASE_URL}/etc/ec/userphoto/${userId}/${uniqueName}.jpg`;
+};
+
 // 7️⃣ Upload Photos
+
 exports.uploadPhotos = async (req, res) => {
   try {
-    const photoPaths = req.files.map((file) => file.path);
-    const profile = await UserDetail.findOneAndUpdate(
-      { userId: req.user.id },
-      { $push: { photos: { $each: photoPaths } } },
+    const userId = req.user.id;
+    const profile = await UserDetail.findOne({ userId });
+
+    if (profile && profile.photos && profile.photos.length >= 4) {
+      return sendResponse(res, false, "Max 4 photos allowed", [], "Limit Reached", 400);
+    }
+
+    const photoUrls = [];
+    for (const file of req.files) {
+      const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      const url = await saveImage(file.buffer, userId, uniqueName);
+      photoUrls.push(url);
+    }
+
+    const updatedProfile = await UserDetail.findOneAndUpdate(
+      { userId },
+      { $push: { photos: { $each: photoUrls } } },
       { new: true, upsert: true }
     );
-    const completion = calculateProfileCompletion(profile);
-    return sendResponse(res, true, "Photos uploaded", {
-      profile,
-      completionPercentage: completion,
-    });
+
+    const completion = calculateProfileCompletion(updatedProfile);
+    return sendResponse(res, true, "Photos uploaded", { profile: updatedProfile, completionPercentage: completion });
   } catch (err) {
     return sendResponse(res, false, "Server Error", [], err.message, 500);
   }
@@ -629,37 +665,59 @@ exports.getFamily = async (req, res) => {
 };
 
 // -------------------- PHOTOS --------------------
+// helper: delete old photos
+const deleteOldPhotos = (photos = []) => {
+  photos.forEach((url) => {
+    try {
+      // extract path after base URL
+      const relativePath = url.replace(BASE_URL, "");
+      const filePath = path.join(BASE_DIR, relativePath);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath); // delete file
+      }
+    } catch (err) {
+      console.error("Failed to delete photo:", err.message);
+    }
+  });
+};
+
+// PUT: replace all photos
 exports.updatePhotos = async (req, res) => {
   try {
-    const photoPaths = req.files.map((file) => file.path);
+    const userId = req.user.id;
 
-    const updatedProfile = await UserDetail.findOneAndUpdate(
-      { userId: req.user.id },
-      { photos: photoPaths },
-      { new: true }
-    );
+    // find existing profile
+    const existingProfile = await UserDetail.findOne({ userId });
+    if (!existingProfile) {
+      return sendResponse(res, false, "Profile not found", [], "Not Found", 404);
+    }
 
-    if (!updatedProfile)
-      return res.status(404).json({
-        success: false,
-        message: "Profile not found",
-        data: [],
-        error: "Not Found",
-      });
+    // remove old photos from filesystem
+    if (existingProfile.photos && existingProfile.photos.length > 0) {
+      deleteOldPhotos(existingProfile.photos);
+    }
 
-    res.json({
-      success: true,
-      message: "Photos updated",
-      data: [updatedProfile],
-      error: null,
+    // save new photos
+    const photoUrls = [];
+    for (const file of req.files) {
+      const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      const url = await saveImage(file.buffer, userId, uniqueName);
+      photoUrls.push(url);
+    }
+
+    // update DB
+    existingProfile.photos = photoUrls;
+    await existingProfile.save({ validateModifiedOnly: true });
+
+
+    const completion = calculateProfileCompletion(existingProfile);
+    return sendResponse(res, true, "Photos updated", {
+      profile: existingProfile,
+      completionPercentage: completion,
     });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-      data: [],
-      error: error.message,
-    });
+  } catch (err) {
+    console.error("updatePhotos error:", err);
+    return sendResponse(res, false, "Server Error", [], err.message, 500);
   }
 };
 
