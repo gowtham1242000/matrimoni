@@ -3,7 +3,7 @@ const calculateProfileCompletion = require("./../utils/profileCompletion");
 const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");
-const BASE_DIR = "/etc/ec/userphoto";  // storage root
+const BASE_DIR = "/etc/ec/userphoto"; // storage root
 const BASE_URL = "http://165.22.222.251:80"; // change to your IP/domain
 // Helper: Standard API Response
 const sendResponse = (
@@ -150,7 +150,6 @@ exports.familyDetails = async (req, res) => {
   }
 };
 
-
 // helper: save image
 // helper: save image
 const saveImage = async (buffer, userId, uniqueName) => {
@@ -178,7 +177,14 @@ exports.uploadPhotos = async (req, res) => {
     const profile = await UserDetail.findOne({ userId });
 
     if (profile && profile.photos && profile.photos.length >= 4) {
-      return sendResponse(res, false, "Max 4 photos allowed", [], "Limit Reached", 400);
+      return sendResponse(
+        res,
+        false,
+        "Max 4 photos allowed",
+        [],
+        "Limit Reached",
+        400
+      );
     }
 
     const photoUrls = [];
@@ -195,7 +201,10 @@ exports.uploadPhotos = async (req, res) => {
     );
 
     const completion = calculateProfileCompletion(updatedProfile);
-    return sendResponse(res, true, "Photos uploaded", { profile: updatedProfile, completionPercentage: completion });
+    return sendResponse(res, true, "Photos uploaded", {
+      profile: updatedProfile,
+      completionPercentage: completion,
+    });
   } catch (err) {
     return sendResponse(res, false, "Server Error", [], err.message, 500);
   }
@@ -689,7 +698,14 @@ exports.updatePhotos = async (req, res) => {
     // find existing profile
     const existingProfile = await UserDetail.findOne({ userId });
     if (!existingProfile) {
-      return sendResponse(res, false, "Profile not found", [], "Not Found", 404);
+      return sendResponse(
+        res,
+        false,
+        "Profile not found",
+        [],
+        "Not Found",
+        404
+      );
     }
 
     // remove old photos from filesystem
@@ -708,7 +724,6 @@ exports.updatePhotos = async (req, res) => {
     // update DB
     existingProfile.photos = photoUrls;
     await existingProfile.save({ validateModifiedOnly: true });
-
 
     const completion = calculateProfileCompletion(existingProfile);
     return sendResponse(res, true, "Photos updated", {
