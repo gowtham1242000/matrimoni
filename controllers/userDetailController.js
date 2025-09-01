@@ -305,11 +305,11 @@ exports.getCompletionPercentage = async (req, res) => {
 // -------------------- BASIC --------------------
 exports.updateBasic = async (req, res) => {
   try {
-    const { profileCreatingFor, name, gender } = req.body;
+    const { profileCreatingFor, name, gender, dob } = req.body;
 
     const updatedProfile = await UserDetail.findOneAndUpdate(
       { userId: req.user.id },
-      { profileCreatingFor, name, gender },
+      { profileCreatingFor, name, gender, dob },
       { new: true }
     );
 
@@ -380,11 +380,11 @@ exports.getBasic = async (req, res) => {
 // -------------------- DETAILS --------------------
 exports.updateDetails = async (req, res) => {
   try {
-    const { dob, maritalStatus, height, weight } = req.body;
+    const { motherTongue, religion, caste } = req.body;
 
     const updatedProfile = await UserDetail.findOneAndUpdate(
       { userId: req.user.id },
-      { dob, maritalStatus, height, weight },
+      { motherTongue, religion, caste },
       { new: true }
     );
 
@@ -445,11 +445,11 @@ exports.getDetails = async (req, res) => {
 // -------------------- LOCATION --------------------
 exports.updateLocation = async (req, res) => {
   try {
-    const { city, state, country } = req.body;
+    const { city, state, country, address, district } = req.body;
 
     const updatedProfile = await UserDetail.findOneAndUpdate(
       { userId: req.user.id },
-      { city, state, country },
+      { city, state, country, address, district },
       { new: true }
     );
 
@@ -510,11 +510,11 @@ exports.getLocation = async (req, res) => {
 // -------------------- PHYSICAL --------------------
 exports.updatePhysical = async (req, res) => {
   try {
-    const { complexion, bodyType, disability } = req.body;
+    const { height, weight, bodyType, diet, disability } = req.body;
 
     const updatedProfile = await UserDetail.findOneAndUpdate(
       { userId: req.user.id },
-      { complexion, bodyType, disability },
+      { height, weight, bodyType, diet, disability },
       { new: true }
     );
 
@@ -575,11 +575,11 @@ exports.getPhysical = async (req, res) => {
 // -------------------- EDUCATION-JOB --------------------
 exports.updateEducationJob = async (req, res) => {
   try {
-    const { education, occupation, income } = req.body;
+    const { highestEducation, professionType, jobTitle } = req.body;
 
     const updatedProfile = await UserDetail.findOneAndUpdate(
       { userId: req.user.id },
-      { education, occupation, income },
+      { highestEducation, professionType, jobTitle },
       { new: true }
     );
 
@@ -640,11 +640,25 @@ exports.getEducationJob = async (req, res) => {
 // -------------------- FAMILY --------------------
 exports.updateFamily = async (req, res) => {
   try {
-    const { fatherName, motherName, siblings } = req.body;
+    const {
+      fatherName,
+      fatherOccupation,
+      motherName,
+      motherOccupation,
+      siblingsCount,
+      familyStatus,
+    } = req.body;
 
     const updatedProfile = await UserDetail.findOneAndUpdate(
       { userId: req.user.id },
-      { fatherName, motherName, siblings },
+      {
+        fatherName,
+        fatherOccupation,
+        motherName,
+        motherOccupation,
+        siblingsCount,
+        familyStatus,
+      },
       { new: true }
     );
 
@@ -795,11 +809,11 @@ exports.getPhotos = async (req, res) => {
 // -------------------- ABOUT --------------------
 exports.updateAbout = async (req, res) => {
   try {
-    const { about } = req.body;
+    const { describeYourself, viewSample } = req.body;
 
     const updatedProfile = await UserDetail.findOneAndUpdate(
       { userId: req.user.id },
-      { about },
+      { describeYourself, viewSample },
       { new: true }
     );
 
@@ -860,11 +874,11 @@ exports.getAbout = async (req, res) => {
 // -------------------- INTEREST --------------------
 exports.updateInterest = async (req, res) => {
   try {
-    const { interests } = req.body;
+    const { addInterest } = req.body;
 
     const updatedProfile = await UserDetail.findOneAndUpdate(
       { userId: req.user.id },
-      { interests },
+      { addInterest },
       { new: true }
     );
 

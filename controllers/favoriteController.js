@@ -1,5 +1,6 @@
 // controllers/favoriteController.js
 const Favorite = require("../models/Favorite");
+const UserDetail = require("../models/UserDetail");
 
 // Add favorite (user favorites another user)
 exports.addFavorite = async (req, res) => {
