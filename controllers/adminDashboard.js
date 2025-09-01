@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const FilterMaster = require("../models/FilterMaster");
 const os = require("os");
 const { exec } = require("child_process");
 const mongoose = require("mongoose");
@@ -108,6 +109,177 @@ exports.getSystemHealth = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error fetching system health",
+      error: error.message,
+    });
+  }
+};
+
+// GET: /api/users/:id
+exports.getUserDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(id) } },
+      {
+        $lookup: {
+          from: "userdetails",
+          localField: "_id",
+          foreignField: "userId",
+          as: "details",
+        },
+      },
+      { $unwind: { path: "$details", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          id: "$_id",
+          userProfileImage: "$details.profileImage",
+          status: { $literal: "Active" },
+          age: "$details.age",
+          email: "$email",
+          mobileNumber: "$mobileNumber",
+          location: "$details.location",
+          educationJob: "$details.educationJob",
+          joined: "$createdAt",
+        },
+      },
+    ]);
+
+    if (!user.length) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      user: user[0],
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching user details",
+      error: error.message,
+    });
+  }
+};
+
+exports.getUserList = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = 4;
+    const skip = (page - 1) * limit;
+
+    // Count total users
+    const totalUsers = await User.countDocuments();
+
+    const users = await User.aggregate([
+      { $sort: { createdAt: -1 } }, // newest first
+      { $skip: skip },
+      { $limit: limit },
+
+      // Join UserDetail
+      {
+        $lookup: {
+          from: "userdetails",
+          localField: "_id",
+          foreignField: "userId",
+          as: "details",
+        },
+      },
+      { $unwind: { path: "$details", preserveNullAndEmptyArrays: true } },
+
+      // Join UserBlock
+      {
+        $lookup: {
+          from: "userblocks",
+          localField: "_id",
+          foreignField: "userId",
+          as: "blockInfo",
+        },
+      },
+      { $unwind: { path: "$blockInfo", preserveNullAndEmptyArrays: true } },
+
+      // Join UserVerification
+      {
+        $lookup: {
+          from: "userverifications",
+          localField: "_id",
+          foreignField: "userId",
+          as: "verifyInfo",
+        },
+      },
+      { $unwind: { path: "$verifyInfo", preserveNullAndEmptyArrays: true } },
+
+      // Final projection
+      {
+        $project: {
+          id: "$_id",
+          name: "$details.name",
+          age: "$details.age",
+          location: "$details.location",
+          status: {
+            $cond: [
+              { $eq: ["$blockInfo.status", "blocked"] },
+              "Blocked",
+              "Active",
+            ],
+          },
+          isVerified: { $ifNull: ["$verifyInfo.isVerified", false] },
+          joined: "$createdAt",
+        },
+      },
+    ]);
+
+    res.json({
+      success: true,
+      users,
+      pagination: {
+        totalUsers,
+        totalPages: Math.ceil(totalUsers / limit),
+        currentPage: page,
+        pageSize: limit,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching user list",
+      error: error.message,
+    });
+  }
+};
+
+// GET: /api/admin/filters?type=caste
+exports.getFilters = async (req, res) => {
+  try {
+    const { type } = req.query; // e.g. "caste"
+
+    let query = {};
+    if (type) query.type = type; // filter by type if passed
+
+    // Fetch filters
+    const filters = await FilterMaster.find(query).sort({ name: 1 }).lean();
+
+    // Record filter usage (increment count in FilterMaster)
+    if (type) {
+      await FilterMaster.updateMany(
+        { type },
+        { $inc: { usageCount: 1 } } // increase usageCount field
+      );
+    }
+
+    res.json({
+      success: true,
+      filters,
+      count: filters.length,
+      message: "Filters fetched and usage recorded",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching filters",
       error: error.message,
     });
   }

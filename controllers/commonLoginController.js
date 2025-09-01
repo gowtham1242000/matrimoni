@@ -1,44 +1,43 @@
-const Admin = require("../models/Admin");
-const SuperAdmin = require("../models/SuperAdmin");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const NewAdmin = require("../models/newAdmin");
 
 exports.commonLogin = async (req, res) => {
   try {
-    const { identifier, password } = req.body;
+    const { email, password } = req.body;
 
-    let user = await Admin.findOne({
-      $or: [{ email: identifier }, { mobileNumber: identifier }],
-    });
-    let role = "Admin";
-
+    // find user by email
+    const user = await NewAdmin.findOne({ email });
     if (!user) {
-      user = await SuperAdmin.findOne({
-        $or: [{ email: identifier }, { mobileNumber: identifier }],
-      });
-      role = "SuperAdmin";
+      return res.status(404).json({ success: false, msg: "User not found" });
     }
 
-    if (!user) {
-      return res.status(404).json({ msg: "User not found" });
-    }
-
+    // validate password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ msg: "Invalid password" });
+      return res.status(400).json({ success: false, msg: "Invalid password" });
     }
 
-    const token = jwt.sign({ id: user._id, role }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
+    // role & permissions from DB
+    const role = user.role; // already stored as role name
+    const permissions = user.permissions || [];
+
+    // generate JWT token
+    const token = jwt.sign(
+      { id: user._id, role, permissions },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
     res.status(200).json({
+      success: true,
       msg: `Login successful as ${role}`,
       role,
+      permissions,
       token,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ msg: "Server error" });
+    console.error("Login error:", err);
+    res.status(500).json({ success: false, msg: "Server error" });
   }
 };

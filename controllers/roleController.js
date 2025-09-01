@@ -15,7 +15,7 @@ exports.createRole = async (req, res) => {
 // Get All Roles
 exports.getAllRoles = async (req, res) => {
   try {
-    const roles = await Role.find().populate("permissions"); // populate permissions for clarity
+    const roles = await Role.find();
     res.json({ success: true, data: roles });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -25,7 +25,7 @@ exports.getAllRoles = async (req, res) => {
 // Get Role by ID
 exports.getRoleById = async (req, res) => {
   try {
-    const role = await Role.findById(req.params.id).populate("permissions");
+    const role = await Role.findById(req.params.id);
     if (!role) {
       return res.status(404).json({ success: false, error: "Role not found" });
     }

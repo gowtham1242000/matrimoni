@@ -8,5 +8,7 @@ router.post("/create", controller.createAdmin);
 router.get("/logout", controller.logout);
 router.get("/overview", adminController.getDashboardOverView);
 router.get("/getSystemHealth", adminController.getSystemHealth);
-
+router.get("/getUserDetails/:id", adminController.getUserDetails);
+router.get("/getUserList", adminController.getUserList);
+router.get("/filters", adminController.getFilters);
 module.exports = router;
