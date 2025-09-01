@@ -10,6 +10,7 @@ const userDetailSchema = new mongoose.Schema({
   // Step 1 - Basic
   profileCreatingFor: { type: String, trim: true },
   name: { type: String, trim: true },
+  dob: { type: Date, required: true },
   gender: { type: String, trim: true },
 
   // Basic Details
@@ -29,7 +30,7 @@ const userDetailSchema = new mongoose.Schema({
   weight: { type: Number },
   bodyType: { type: String, trim: true },
   diet: { type: String, trim: true },
-//  disability: { type: String, enum: ["Yes", "No"], default: "No" },
+  //  disability: { type: String, enum: ["Yes", "No"], default: "No" },
   disability: { type: String, enum: ["Yes", "No", "yes", "no"] },
 
   // Education/Job

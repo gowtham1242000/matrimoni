@@ -243,3 +243,129 @@ exports.getUserProfileList = async (req, res) => {
     });
   }
 };
+
+// ================== FORGOT PASSWORD FLOW ==================
+
+// 1️⃣ Forgot Password (send OTP)
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { identifier } = req.body;
+
+    const user = await User.findOne({
+      $or: [{ emailId: identifier }, { mobileNumber: identifier }],
+    });
+
+    if (!user) {
+      return sendResponse(res, false, "User not found", [], null, 400);
+    }
+
+    // Set default OTP for now (in real use generateOtp())
+    const otp = "4321";
+    const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
+
+    user.otp = otp;
+    user.otpExpiry = otpExpiry;
+    user.isOtpVerified = false; // reset verification for reset flow
+
+    await user.save();
+
+    console.log(`📩 Forgot Password OTP for ${identifier}: ${otp}`);
+
+    return sendResponse(res, true, "OTP sent for password reset");
+  } catch (err) {
+    console.error(err);
+    return sendResponse(res, false, "Server Error", [], err.message, 500);
+  }
+};
+
+// 2️⃣ Verify Forgot Password OTP
+exports.verifyForgotPasswordOtp = async (req, res) => {
+  try {
+    const { identifier, otp } = req.body;
+
+    const user = await User.findOne({
+      $or: [{ emailId: identifier }, { mobileNumber: identifier }],
+    });
+
+    if (!user) return sendResponse(res, false, "User not found", [], null, 400);
+
+    if (user.otp !== otp || new Date() > user.otpExpiry) {
+      return sendResponse(res, false, "Invalid or expired OTP", [], null, 400);
+    }
+
+    user.isOtpVerified = true;
+    user.otp = undefined;
+    user.otpExpiry = undefined;
+    await user.save();
+
+    // Issue a temporary token for password reset
+    const resetToken = jwt.sign(
+      { id: user._id, purpose: "resetPassword" },
+      process.env.JWT_SECRET,
+      { expiresIn: "10m" }
+    );
+
+    return sendResponse(
+      res,
+      true,
+      "OTP verified. You can reset password now.",
+      {
+        resetToken,
+      }
+    );
+  } catch (err) {
+    console.error(err);
+    return sendResponse(res, false, "Server Error", [], err.message, 500);
+  }
+};
+
+// 3️⃣ Reset Password
+exports.resetPassword = async (req, res) => {
+  try {
+    const { resetToken, password } = req.body;
+
+    if (!resetToken)
+      return sendResponse(res, false, "Reset token is required", [], null, 400);
+
+    let decoded;
+    try {
+      decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+    } catch (err) {
+      return sendResponse(
+        res,
+        false,
+        "Invalid or expired reset token",
+        [],
+        err.message,
+        400
+      );
+    }
+
+    const user = await User.findById(decoded.id);
+    if (!user) return sendResponse(res, false, "User not found", [], null, 400);
+
+    if (!validatePassword(password)) {
+      return sendResponse(
+        res,
+        false,
+        "Password must contain uppercase, lowercase, number, symbol, and be 8+ characters long.",
+        [],
+        null,
+        400
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    return sendResponse(
+      res,
+      true,
+      "Password reset successfully. Please login."
+    );
+  } catch (err) {
+    console.error(err);
+    return sendResponse(res, false, "Server Error", [], err.message, 500);
+  }
+};

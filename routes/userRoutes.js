@@ -11,6 +11,9 @@ router.post("/verifyOtp", userController.verifyOtp);
 router.post("/setPassword", userController.setPassword);
 router.post("/login", userController.login);
 router.get("/getUserProfileList", auth, userController.getUserProfileList);
+router.post("/forgotPassword", userController.forgotPassword);
+router.post("/verifyForgotPasswordOtp", userController.verifyForgotPasswordOtp);
+router.post("/resetPassword", userController.resetPassword);
 // ✅ if you have login logic
 
 // Protected Routes

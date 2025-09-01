@@ -24,9 +24,8 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Pre-save hook to enforce password setting only after OTP verification
 userSchema.pre("save", function (next) {
-  if (!this.isOtpVerified && this.password) {
+  if (this.isNew && !this.isOtpVerified && this.password) {
     return next(new Error("Cannot set password before OTP verification."));
   }
   next();

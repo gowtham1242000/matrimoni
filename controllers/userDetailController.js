@@ -22,18 +22,37 @@ const sendResponse = (
   });
 };
 
-// 1️⃣ Create or Update Basic Info
 exports.createOrUpdateBasic = async (req, res) => {
   try {
-    const { profileCreatingFor, name, gender } = req.body;
+    const { profileCreatingFor, name, gender, dob } = req.body;
+
+    let dobDate = null;
+    if (dob) {
+      // expecting format "DD-MM-YYYY"
+      const [day, month, year] = dob.split("-");
+      dobDate = new Date(`${year}-${month}-${day}`);
+    }
+
     const profile = await UserDetail.findOneAndUpdate(
       { userId: req.user.id },
-      { profileCreatingFor, name, gender },
+      { profileCreatingFor, name, gender, dob: dobDate },
       { new: true, upsert: true }
     );
+
     const completion = calculateProfileCompletion(profile);
+
     return sendResponse(res, true, "Basic info updated", {
-      profile,
+      profile: {
+        ...profile._doc,
+        dob: profile.dob
+          ? profile.dob
+              .toISOString()
+              .split("T")[0]
+              .split("-")
+              .reverse()
+              .join("-") // "DD-MM-YYYY"
+          : null,
+      },
       completionPercentage: completion,
     });
   } catch (err) {
@@ -125,7 +144,7 @@ exports.familyDetails = async (req, res) => {
       fatherOccupation,
       motherName,
       motherOccupation,
-      siblingsCounts,
+      siblingsCount,
       familyStatus,
     } = req.body;
     const profile = await UserDetail.findOneAndUpdate(
@@ -135,7 +154,7 @@ exports.familyDetails = async (req, res) => {
         fatherOccupation,
         motherName,
         motherOccupation,
-        siblingsCounts,
+        siblingsCount,
         familyStatus,
       },
       { new: true, upsert: true }
@@ -322,20 +341,30 @@ exports.getBasic = async (req, res) => {
   try {
     const profile = await UserDetail.findOne(
       { userId: req.user.id },
-      "profileCreatingFor name gender"
+      "profileCreatingFor name gender dob"
     );
-    if (!profile)
+
+    if (!profile) {
       return res.status(404).json({
         success: false,
         message: "Profile not found",
         data: [],
         error: "Not Found",
       });
+    }
+
+    // format dob as DD-MM-YYYY
+    const formattedProfile = {
+      ...profile._doc,
+      dob: profile.dob
+        ? profile.dob.toISOString().split("T")[0].split("-").reverse().join("-")
+        : null,
+    };
 
     res.json({
       success: true,
       message: "Basic fetched",
-      data: [profile],
+      data: [formattedProfile],
       error: null,
     });
   } catch (error) {
@@ -387,7 +416,7 @@ exports.getDetails = async (req, res) => {
   try {
     const profile = await UserDetail.findOne(
       { userId: req.user.id },
-      "dob maritalStatus height weight"
+      "motherTongue religion caste "
     );
     if (!profile)
       return res.status(404).json({
@@ -452,7 +481,7 @@ exports.getLocation = async (req, res) => {
   try {
     const profile = await UserDetail.findOne(
       { userId: req.user.id },
-      "city state country"
+      "city state address district pincode"
     );
     if (!profile)
       return res.status(404).json({
@@ -517,7 +546,7 @@ exports.getPhysical = async (req, res) => {
   try {
     const profile = await UserDetail.findOne(
       { userId: req.user.id },
-      "complexion bodyType disability"
+      "height weight bodyType diet disability"
     );
     if (!profile)
       return res.status(404).json({
@@ -582,7 +611,7 @@ exports.getEducationJob = async (req, res) => {
   try {
     const profile = await UserDetail.findOne(
       { userId: req.user.id },
-      "education occupation income"
+      "highestEducation professionType jobTitle"
     );
     if (!profile)
       return res.status(404).json({
@@ -647,7 +676,7 @@ exports.getFamily = async (req, res) => {
   try {
     const profile = await UserDetail.findOne(
       { userId: req.user.id },
-      "fatherName motherName siblings"
+      "fatherName fatherOccupation motherName motherOccupation siblingsCount familyStatus"
     );
     if (!profile)
       return res.status(404).json({
@@ -800,7 +829,10 @@ exports.updateAbout = async (req, res) => {
 
 exports.getAbout = async (req, res) => {
   try {
-    const profile = await UserDetail.findOne({ userId: req.user.id }, "about");
+    const profile = await UserDetail.findOne(
+      { userId: req.user.id },
+      "describeYourself viewSample"
+    );
     if (!profile)
       return res.status(404).json({
         success: false,
@@ -864,7 +896,7 @@ exports.getInterest = async (req, res) => {
   try {
     const profile = await UserDetail.findOne(
       { userId: req.user.id },
-      "interests"
+      "addInterest"
     );
     if (!profile)
       return res.status(404).json({

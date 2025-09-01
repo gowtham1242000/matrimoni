@@ -8,24 +8,46 @@ exports.addFavorite = async (req, res) => {
     const favoritedBy = req.user.id; // current logged-in user
 
     if (favoritedBy === userId) {
-      return res.status(400).json({ msg: "You cannot favorite yourself" });
+      return res.status(400).json({
+        success: false,
+        message: "You cannot favorite yourself",
+        data: [],
+        error: "Invalid Operation",
+      });
     }
 
     const existing = await Favorite.findOne({
       favoritedBy,
       favoritedUser: userId,
     });
-    if (existing)
-      return res.status(400).json({ msg: "Already favorited this user" });
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: "Already favorited this user",
+        data: [],
+        error: "Duplicate Entry",
+      });
+    }
 
     const newFav = await Favorite.create({
       favoritedBy,
       favoritedUser: userId,
     });
-    res.json({ msg: "User added to favorites", favorite: newFav });
+
+    res.json({
+      success: true,
+      message: "User added to favorites",
+      data: [newFav],
+      error: null,
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      data: [],
+      error: err.message,
+    });
   }
 };
 
@@ -39,12 +61,30 @@ exports.removeFavorite = async (req, res) => {
       favoritedBy,
       favoritedUser: userId,
     });
-    if (!deleted) return res.status(404).json({ msg: "Favorite not found" });
 
-    res.json({ msg: "Favorite removed" });
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: "Favorite not found",
+        data: [],
+        error: "Not Found",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Favorite removed",
+      data: [deleted],
+      error: null,
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      data: [],
+      error: err.message,
+    });
   }
 };
 
@@ -57,9 +97,19 @@ exports.getFavorites = async (req, res) => {
       "name email"
     ); // show who favorited
 
-    res.json({ count: favorites.length, favorites });
+    res.json({
+      success: true,
+      message: "Favorites fetched successfully",
+      data: favorites,
+      error: null,
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      data: [],
+      error: err.message,
+    });
   }
 };
