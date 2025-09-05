@@ -21,9 +21,9 @@ exports.createAdmin = async (req, res) => {
     });
 
     await admin.save();
-    res.json({ msg: "Admin created successfully" });
+    res.json({ message: "Admin created successfully" });
   } catch (err) {
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -55,5 +55,5 @@ exports.createAdmin = async (req, res) => {
 // };
 
 exports.logout = (req, res) => {
-  res.json({ msg: "Logged out (token removed on client)" });
+  res.json({ message: "Logged out (token removed on client)" });
 };

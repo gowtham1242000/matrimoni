@@ -287,18 +287,96 @@ exports.getProfile = async (req, res) => {
   }
 };
 
-// 1️⃣1️⃣ Get Completion Percentage
+// Utility function: check profile completion
+function calculateProfileCompletionWithMissing(profile) {
+  let totalFields = 0;
+  let filledFields = 0;
+  let missingFields = [];
+
+  // Fields we want to check
+  const fieldsToCheck = [
+    "profileCreatingFor",
+    "name",
+    "dob",
+    "gender",
+    "motherTongue",
+    "religion",
+    "caste",
+    "address",
+    "state",
+    "district",
+    "city",
+    "pincode",
+    "height",
+    "weight",
+    "bodyType",
+    "diet",
+    "disability",
+    "highestEducation",
+    "professionType",
+    "jobTitle",
+    "fatherName",
+    "fatherOccupation",
+    "motherName",
+    "motherOccupation",
+    "siblingsCount",
+    "familyStatus",
+    "addInterest",
+    "photos",
+    "describeYourself",
+  ];
+
+  fieldsToCheck.forEach((field) => {
+    totalFields++;
+    if (
+      profile[field] !== undefined &&
+      profile[field] !== null &&
+      profile[field] !== "" &&
+      !(Array.isArray(profile[field]) && profile[field].length === 0)
+    ) {
+      filledFields++;
+    } else {
+      missingFields.push(field);
+    }
+  });
+
+  const completionPercentage = Math.round((filledFields / totalFields) * 100);
+
+  return { completionPercentage, missingFields };
+}
+
 exports.getCompletionPercentage = async (req, res) => {
   try {
     const profile = await UserDetail.findOne({ userId: req.user.id });
-    if (!profile)
-      return sendResponse(res, false, "Profile not found", [], null, 404);
-    const completion = calculateProfileCompletion(profile);
-    return sendResponse(res, true, "Completion percentage fetched", {
-      completionPercentage: completion,
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        message: "Profile not found",
+        data: [],
+        error: null,
+      });
+    }
+
+    const { completionPercentage, missingFields } =
+      calculateProfileCompletionWithMissing(profile.toObject());
+
+    return res.status(200).json({
+      success: true,
+      message: "Completion percentage fetched",
+      data: {
+        profile,
+        completionPercentage,
+        missingFields,
+      },
+      error: null,
     });
   } catch (err) {
-    return sendResponse(res, false, "Server Error", [], err.message, 500);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+      data: [],
+      error: err.message,
+    });
   }
 };
 

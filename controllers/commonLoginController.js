@@ -9,13 +9,17 @@ exports.commonLogin = async (req, res) => {
     // find user by email
     const user = await NewAdmin.findOne({ email });
     if (!user) {
-      return res.status(404).json({ success: false, msg: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     // validate password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ success: false, msg: "Invalid password" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid password" });
     }
 
     // role & permissions from DB
@@ -31,13 +35,13 @@ exports.commonLogin = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      msg: `Login successful as ${role}`,
+      message: `Login successful as ${role}`,
       role,
       permissions,
       token,
     });
   } catch (err) {
     console.error("Login error:", err);
-    res.status(500).json({ success: false, msg: "Server error" });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
